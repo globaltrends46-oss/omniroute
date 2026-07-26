@@ -234,7 +234,6 @@
     "@ngrok/ngrok": "^1.7.0",
     "@tailwindcss/postcss": "^4.0.0",
     "jsdom": "^26.0.0",
-    "postcss": "^8.5.1",
     "typescript": "^5.7.3",
     "@swc/helpers": "0.5.23",
     "@toon-format/toon": "^2.3.0",
