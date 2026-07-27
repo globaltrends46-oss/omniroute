@@ -282,6 +282,12 @@ export async function main() {
           projectRoot,
           copyNatives: true,
         });
+        try {
+          await fs.cp(distDir, path.join(projectRoot, ".next"), { recursive: true, force: true });
+          console.log("[build-next-isolated] Synced .build/next to .next for platform deployment");
+        } catch (cpErr) {
+          console.warn("[build-next-isolated] Non-fatal error syncing .next:", cpErr);
+        }
       } catch (assembleErr) {
         console.warn("[build-next-isolated] Non-fatal error assembling standalone:", assembleErr);
       }
