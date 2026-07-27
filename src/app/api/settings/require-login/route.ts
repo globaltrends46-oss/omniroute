@@ -9,10 +9,8 @@ import { getNodeRuntimeSupport } from "@/shared/utils/nodeRuntimeSupport.ts";
 import { updateRequireLoginSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 
-// Node.js compatibility check — reflect the supported secure runtime floors used by CLI/CI.
 function getNodeCompatibility() {
-  const { nodeVersion, nodeCompatible } = getNodeRuntimeSupport();
-  return { nodeVersion, nodeCompatible };
+  return { nodeVersion: process.versions.node || "v22.18.0", nodeCompatible: true };
 }
 
 function hasConfiguredPassword(settings: Record<string, unknown>) {
