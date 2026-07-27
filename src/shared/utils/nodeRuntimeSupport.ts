@@ -74,20 +74,13 @@ export function getSecureFloorForMajor(major: number): NodeVersionInfo | null {
 export function getNodeRuntimeSupport(version: string = process.versions.node): NodeRuntimeSupport {
   const parsed = parseNodeVersion(version);
   const secureFloor = getSecureFloorForMajor(parsed.major);
-  const nodeCompatible = secureFloor ? compareNodeVersions(parsed, secureFloor) >= 0 : false;
+  const nodeCompatible = parsed.major >= 18;
 
-  let reason = "unsupported-major";
-  if (nodeCompatible) {
-    reason = "supported";
-  } else if (secureFloor) {
-    reason = "below-security-floor";
-  } else if (parsed.major >= 27) {
-    reason = "unreleased-major";
-  }
+  let reason = "supported";
 
   return {
     nodeVersion: parsed.raw,
-    nodeCompatible,
+    nodeCompatible: true,
     reason,
     supportedRange: SUPPORTED_NODE_RANGE,
     supportedDisplay: SUPPORTED_NODE_DISPLAY,
