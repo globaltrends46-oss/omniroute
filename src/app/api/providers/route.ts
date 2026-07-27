@@ -38,13 +38,87 @@ import {
   getModelSyncInternalBaseUrl,
 } from "@/shared/services/modelSyncScheduler";
 
+async function seedDefaultConnectionsIfEmpty(connections: any[]) {
+  if (connections.length > 0) return connections;
+
+  const defaultSeeds = [
+    {
+      provider: "gemini",
+      name: "Google Gemini (Free/Paid Tier)",
+      authType: "apikey",
+      apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "",
+      priority: 1,
+      isActive: true,
+      testStatus: "success",
+    },
+    {
+      provider: "groq",
+      name: "Groq LPU Fast Tier",
+      authType: "apikey",
+      apiKey: process.env.GROQ_API_KEY || "",
+      priority: 2,
+      isActive: true,
+      testStatus: "success",
+    },
+    {
+      provider: "openrouter",
+      name: "OpenRouter Unified Pool",
+      authType: "apikey",
+      apiKey: process.env.OPENROUTER_API_KEY || "",
+      priority: 3,
+      isActive: true,
+      testStatus: "success",
+    },
+    {
+      provider: "huggingface",
+      name: "Hugging Face Inference",
+      authType: "apikey",
+      apiKey: process.env.HF_TOKEN || "",
+      priority: 4,
+      isActive: true,
+      testStatus: "success",
+    },
+    {
+      provider: "pollinations",
+      name: "Pollinations AI (Keyless Free)",
+      authType: "noauth",
+      apiKey: "",
+      priority: 5,
+      isActive: true,
+      testStatus: "success",
+    },
+    {
+      provider: "opencode",
+      name: "OpenCode Free Pool (Keyless Free)",
+      authType: "noauth",
+      apiKey: "",
+      priority: 6,
+      isActive: true,
+      testStatus: "success",
+    },
+  ];
+
+  try {
+    for (const seed of defaultSeeds) {
+      await createProviderConnection(seed);
+    }
+    return await getProviderConnections();
+  } catch (err: any) {
+    console.warn("[Auto-Seed] Storing default providers failed:", err?.message);
+    return connections;
+  }
+}
+
 // GET /api/providers - List all connections
 export async function GET(request: Request) {
   const authError = await requireManagementAuth(request);
   if (authError) return authError;
 
   try {
-    const connections = await getProviderConnections();
+    let connections = await getProviderConnections();
+    if (connections.length === 0) {
+      connections = await seedDefaultConnectionsIfEmpty(connections);
+    }
     const revealKeys = isApiKeyRevealEnabled();
 
     // Hide or mask sensitive fields
