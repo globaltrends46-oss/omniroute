@@ -1,4 +1,7 @@
 import { CORS_HEADERS, handleCorsOptions } from "@/shared/utils/cors";
+
+export const maxDuration = 300;
+export const dynamic = "force-dynamic";
 import { callCloudWithMachineId } from "@/shared/utils/cloud";
 import { handleChat } from "@/sse/handlers/chat";
 import { generateRequestId } from "@/shared/utils/requestId";
