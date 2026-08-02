@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getAuditRequestContext, logAuditEvent } from "@/lib/compliance/index";
-import { getSettings } from "@/lib/localDb";
+import { getSettings, updateSettings } from "@/lib/localDb";
 import { SignJWT } from "jose";
 import { cookies } from "next/headers";
 import {
   ensurePersistentManagementPasswordHash,
   getStoredManagementPassword,
+  hashManagementPassword,
   verifyManagementPassword,
 } from "@/lib/auth/managementPassword";
 import { loginSchema } from "@/shared/validation/schemas";
