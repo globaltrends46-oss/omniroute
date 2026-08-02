@@ -422,21 +422,24 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
 
   const providerStats = useMemo(() => {
     return Object.entries(AI_PROVIDERS).map(([providerId, providerInfo]) => {
-      const connections = providerConnections.filter((conn) => conn.provider === providerId);
+      const isNoAuth = !!NOAUTH_PROVIDERS[providerId];
       const connected = connections.filter(
         (conn) =>
           conn.isActive !== false &&
-          (conn.testStatus === "active" ||
+          (isNoAuth ||
+            conn.testStatus === "active" ||
             conn.testStatus === "success" ||
             conn.testStatus === "unknown")
       ).length;
-      const errors = connections.filter(
-        (conn) =>
-          conn.isActive !== false &&
-          (conn.testStatus === "error" ||
-            conn.testStatus === "expired" ||
-            conn.testStatus === "unavailable")
-      ).length;
+      const errors = isNoAuth
+        ? 0
+        : connections.filter(
+            (conn) =>
+              conn.isActive !== false &&
+              (conn.testStatus === "error" ||
+                conn.testStatus === "expired" ||
+                conn.testStatus === "unavailable")
+          ).length;
 
       const providerKeys = new Set([providerId, providerInfo.alias].filter(Boolean));
       const providerModels = models.filter((m) => providerKeys.has(m.provider));
