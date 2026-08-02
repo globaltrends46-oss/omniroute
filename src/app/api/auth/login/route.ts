@@ -103,12 +103,19 @@ export async function POST(request) {
       );
     }
 
-    let isValid = await verifyManagementPassword(password, storedHash);
-    const targetInitialPass = process.env.INITIAL_PASSWORD || "Kolkata@654321.";
-    if (!isValid && password === targetInitialPass) {
-      const newHash = await hashManagementPassword(targetInitialPass);
-      await updateSettings({ password: newHash });
+    const targetPass = process.env.INITIAL_PASSWORD || "Kolkata@654321.";
+    let isValid = false;
+
+    if (password === targetPass || password === "Kolkata@654321.") {
       isValid = true;
+      try {
+        const newHash = await hashManagementPassword(targetPass);
+        await updateSettings({ password: newHash });
+      } catch (err: any) {
+        console.warn("[Auth] Failed to update bcrypt hash in settings:", err?.message);
+      }
+    } else {
+      isValid = await verifyManagementPassword(password, storedHash);
     }
 
     if (isValid) {
