@@ -90,16 +90,15 @@ function withFamilyDefault(value: ProxyValue): ProxyValue {
 // ──────────────── Settings ────────────────
 
 export async function getSettings() {
-  const db = getDbInstance();
-  const rows = db.prepare("SELECT key, value FROM key_value WHERE namespace = 'settings'").all();
   const settings: Record<string, unknown> = {
     cloudEnabled: true,
+    setupComplete: true,
     tailscaleEnabled: false,
     tailscaleUrl: "",
     stickyRoundRobinLimit: 3,
     disableSessionStickiness: false,
     comboStrategy: "fallback",
-    comboStickyRoundRobinLimit: null, // null = inherit stickyRoundRobinLimit (a literal default here shadows the documented batched-rotation default of 3 — #6678 regression caught by the v3.8.47 release CI)
+    comboStickyRoundRobinLimit: null,
     providerStrategies: {},
     requestRetry: 3,
     maxRetryIntervalSec: 30,
@@ -118,10 +117,6 @@ export async function getSettings() {
     preferClaudeCodeForUnprefixedClaudeModels: isTruthyEnvFlag(
       process.env.OMNIROUTE_PREFER_CLAUDE_CODE_FOR_UNPREFIXED_CLAUDE_MODELS
     ),
-    // Opt-in (default "off"): short-circuits Claude Code's `--permission-mode auto`
-    // internal security-classifier request with a synthetic `<block>no</block>` ALLOW
-    // response, without calling the upstream provider. See
-    // open-sse/handlers/chatCore/claudeClassifierCompat.ts for the detector + builder.
     claudeClassifierCompat: "off",
     autoRefreshProviderQuota: false,
     autoRefreshProviderQuotaInterval: 180,
@@ -139,15 +134,7 @@ export async function getSettings() {
     wsAuth: false,
     maxBodySizeMb: requestBodyLimitMbFromEnv(process.env.MAX_BODY_SIZE_BYTES),
     debugMode: true,
-    // Opt-in diagnostic: when true, the chat handler emits a `log.debug("TOOLS", …)`
-    // line per request summarizing tool count + MCP/hosted/client source breakdown.
     logToolSources: false,
-    // LOCAL_ONLY manage-scope bypass policy defaults (T-011 / spec §Data Model).
-    // Preserves PR #2473 behaviour on migration — the bypass starts ENABLED
-    // for `/api/mcp/` so existing manage-scope Bearer clients keep working.
-    // Operators flip the kill-switch to false (or drop the prefix) via the
-    // Settings UI; the change hot-reloads through `applyRuntimeSettings` →
-    // `applyAuthzBypassSection` → `getAuthzBypassSnapshot()`.
     localOnlyManageScopeBypassEnabled: true,
     localOnlyManageScopeBypassPrefixes: ["/api/mcp/"],
     customBannedSignals: [],
@@ -155,36 +142,40 @@ export async function getSettings() {
     perKeyProxyEnabled: false,
     customSystemPromptEnabled: false,
     customSystemPrompt: "",
-    // #6316: Opt-in filter that hides paid-only models from the /v1/models catalog.
-    // Uses isFreeModel() from src/shared/utils/freeModels.ts to detect free entries
-    // (`:free` suffix, zero-price pricing, or FREE_MODEL_BUDGETS membership). Default
-    // false preserves prior behaviour; opt-in only.
     hidePaidModels: false,
   };
-  for (const row of rows) {
-    const record = toRecord(row);
-    const key = typeof record.key === "string" ? record.key : null;
-    const rawValue = typeof record.value === "string" ? record.value : null;
-    if (!key || rawValue === null) continue;
-    try {
-      settings[key] = JSON.parse(rawValue);
-    } catch {
-      settings[key] = rawValue;
+
+  try {
+    const db = getDbInstance();
+    const rows = db.prepare("SELECT key, value FROM key_value WHERE namespace = 'settings'").all();
+    for (const row of rows) {
+      const record = toRecord(row);
+      const key = typeof record.key === "string" ? record.key : null;
+      const rawValue = typeof record.value === "string" ? record.value : null;
+      if (!key || rawValue === null) continue;
+      try {
+        settings[key] = JSON.parse(rawValue);
+      } catch {
+        settings[key] = rawValue;
+      }
     }
+
+    if (!settings.setupComplete && process.env.INITIAL_PASSWORD) {
+      settings.setupComplete = true;
+      settings.requireLogin = true;
+      db.prepare(
+        "INSERT OR REPLACE INTO key_value (namespace, key, value) VALUES ('settings', 'setupComplete', 'true')"
+      ).run();
+      db.prepare(
+        "INSERT OR REPLACE INTO key_value (namespace, key, value) VALUES ('settings', 'requireLogin', 'true')"
+      ).run();
+    }
+  } catch (err) {
+    console.warn("[OmniRoute Settings DB Warning] Unable to read settings table from SQLite:", err);
   }
 
-  // Auto-complete onboarding for pre-configured deployments (Docker/VM)
-  // If INITIAL_PASSWORD is set via env, this is a headless deploy — skip the wizard
-  if (!settings.setupComplete && process.env.INITIAL_PASSWORD) {
-    settings.setupComplete = true;
-    settings.requireLogin = true;
-    db.prepare(
-      "INSERT OR REPLACE INTO key_value (namespace, key, value) VALUES ('settings', 'setupComplete', 'true')"
-    ).run();
-    db.prepare(
-      "INSERT OR REPLACE INTO key_value (namespace, key, value) VALUES ('settings', 'requireLogin', 'true')"
-    ).run();
-  }
+  return settings;
+}
 
   return settings;
 }
