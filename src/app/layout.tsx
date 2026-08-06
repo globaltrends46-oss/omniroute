@@ -21,40 +21,56 @@ export const viewport: Viewport = {
 };
 
 export async function generateMetadata() {
-  const settings = await getSettings();
-  const instanceName = settings?.instanceName || "OmniRoute";
-  const customFaviconUrl = settings?.customFaviconUrl || settings?.customFaviconBase64;
+  try {
+    const settings = await getSettings();
+    const instanceName = (settings as any)?.instanceName || "OmniRoute";
+    const customFaviconUrl = (settings as any)?.customFaviconUrl || (settings as any)?.customFaviconBase64;
 
-  return {
-    title: `${instanceName} — AI Gateway for Multi-Provider LLMs`,
-    description:
-      "OmniRoute is an AI gateway for multi-provider LLMs. One endpoint for all your AI providers.",
-    manifest: "/manifest.webmanifest",
-    applicationName: instanceName,
-    appleWebApp: {
-      capable: true,
-      title: instanceName,
-      statusBarStyle: "black-translucent",
-    },
-    other: {
-      "mobile-web-app-capable": "yes",
-    },
-    icons: {
-      icon: customFaviconUrl
-        ? "/api/settings/favicon"
-        : [
-            { url: "/favicon.ico", sizes: "any" },
-            { url: "/favicon.svg", type: "image/svg+xml" },
-            { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
-          ],
-      apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
-    },
-  };
+    return {
+      title: `${instanceName} — AI Gateway for Multi-Provider LLMs`,
+      description:
+        "OmniRoute is an AI gateway for multi-provider LLMs. One endpoint for all your AI providers.",
+      manifest: "/manifest.webmanifest",
+      applicationName: instanceName,
+      appleWebApp: {
+        capable: true,
+        title: instanceName,
+        statusBarStyle: "black-translucent",
+      },
+      other: {
+        "mobile-web-app-capable": "yes",
+      },
+      icons: {
+        icon: customFaviconUrl
+          ? "/api/settings/favicon"
+          : [
+              { url: "/favicon.ico", sizes: "any" },
+              { url: "/favicon.svg", type: "image/svg+xml" },
+              { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
+            ],
+        apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+      },
+    };
+  } catch (e) {
+    return {
+      title: "OmniRoute — AI Gateway",
+      description: "OmniRoute AI Gateway"
+    };
+  }
 }
 
 export default async function RootLayout({ children }) {
-  const locale = await getLocale();
-  const messages = normalizeComplianceEventTypes((await getMessages()) as Record<string, unknown>);
+  let locale = "en";
+  let messages: Record<string, unknown> = {};
+
+  try {
+    locale = await getLocale();
+    const raw = await getMessages();
+    messages = normalizeComplianceEventTypes(raw as Record<string, unknown>);
+  } catch (err) {
+    console.warn("[OmniRoute Layout] Failed to get locale/messages:", err);
+  }
+
   const isRtl = RTL_LOCALES.includes(locale as (typeof RTL_LOCALES)[number]);
 
   return (
