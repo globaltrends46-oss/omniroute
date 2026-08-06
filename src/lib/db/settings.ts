@@ -177,9 +177,6 @@ export async function getSettings() {
   return settings;
 }
 
-  return settings;
-}
-
 export async function updateSettings(updates: Record<string, unknown>) {
   // Detect first-time setup completion before we overwrite settings.
   let setupJustCompleted = false;
